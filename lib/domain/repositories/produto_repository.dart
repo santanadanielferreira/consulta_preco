@@ -7,5 +7,5 @@ abstract class ProdutoRepository {
   Future<List<Produto>> buscarPorNome(String nome);
   Future<Produto?> buscarPorId(int id);
   Future<List<Produto>> listarProdutos();
-  Future<List<Produto>> listarProdutosPorColaborador(int idColaborador);
+  Future<List<Produto>> listarProdutosPorColaborador(int? idColaborador);
 }

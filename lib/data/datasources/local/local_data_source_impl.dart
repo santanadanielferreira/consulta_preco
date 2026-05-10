@@ -114,7 +114,7 @@ class LocalDataSourceImpl implements LocalDataSource {
   }
 
   @override
-  Future<List<ProdutoModel>> listarProdutosPorColaborador(int idColaborador) async {
+  Future<List<ProdutoModel>> listarProdutosPorColaborador(int? idColaborador) async {
     final db = await _db;
     final result = await db.query(
       'produto',

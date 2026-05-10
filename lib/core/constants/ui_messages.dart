@@ -18,4 +18,5 @@ class UiMessages {
   static const confirmarExclusaoItem = 'Deseja realmente remover este item da coleta?';
   static const itemRemovido = 'Item removido da coleta.';
   static const falhaRemoverItem = 'Falha ao remover item da coleta.';
+  static const confirmarLogout = 'Deseja realmente fazer logout?';
 }

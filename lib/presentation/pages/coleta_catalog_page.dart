@@ -213,6 +213,59 @@ class _ColetaCatalogPageState extends ConsumerState<ColetaCatalogPage> {
     }
   }
 
+  Future<void> _confirmarLogout() async {
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(color: const Color.fromRGBO(74, 137, 243, 0.12), borderRadius: BorderRadius.circular(12)),
+                      child: const Icon(Icons.logout_outlined, color: Color(0xFF4A89F3)),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text('Confirmar logout', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: _primaryBlue, fontWeight: FontWeight.w800))),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(UiMessages.confirmarLogout, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: _mutedColor)),
+                const SizedBox(height: 18),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pushNamed(context, AppConstants.routeLogin,),
+                      style: ElevatedButton.styleFrom(backgroundColor: _primaryBlue),
+                      child: const Text('Sair'),
+                    ),
+                  ],
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (confirmou != true) {
+      return;
+    }
+
+
+  }
+
   String? _resolveItemImageBase64(_CatalogItemView item) {
     final candidates = <String?>[
       item.item.fotoBase64,
@@ -632,11 +685,17 @@ class _ColetaCatalogPageState extends ConsumerState<ColetaCatalogPage> {
                 arguments: ColetaSummaryArgs(
                   idColeta: widget.args.idColeta,
                   idLoja: widget.args.idLoja,
+                  idColaborador: ref.read(colaboradorSessaoProvider)?.id ?? 0,
                 ),
               );
             },
             icon: const Icon(Icons.assessment_outlined, color: _primaryBlue),
             tooltip: 'Ver progresso',
+          ),
+          IconButton(
+            onPressed: _confirmarLogout,
+            icon: const Icon(Icons.logout_outlined, color: Color.fromARGB(255, 253, 72, 0)),
+            tooltip: 'Logout',
           ),
           const SizedBox(width: 4),
         ],

@@ -48,7 +48,7 @@ class ProdutoRepositoryImpl implements ProdutoRepository {
   }
 
   @override
-  Future<List<Produto>> listarProdutosPorColaborador(int idColaborador) {
+  Future<List<Produto>> listarProdutosPorColaborador(int? idColaborador) {
     return _localDataSource.listarProdutosPorColaborador(idColaborador);
   }
 }

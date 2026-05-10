@@ -46,8 +46,10 @@ class ColetaSummaryArgs {
   const ColetaSummaryArgs({
     required this.idColeta,
     required this.idLoja,
+    required this.idColaborador,
   });
 
   final int idColeta;
   final int idLoja;
+  final int idColaborador;
 }

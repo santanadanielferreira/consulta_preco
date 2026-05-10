@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:KeepPrice/domain/entities/colaborador.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -27,9 +28,11 @@ class _ColetaSummaryPageState extends ConsumerState<ColetaSummaryPage> {
   Future<_SummaryData> _loadSummary() async {
     final progresso = await ref.read(calcularProgressoUseCaseProvider).execute(
           idColeta: widget.args.idColeta,
+          idColaborador: widget.args.idColaborador,
         );
+    final Colaborador? colaborador = ref.watch(colaboradorSessaoProvider);
 
-    final produtos = await ref.read(produtoRepositoryProvider).listarProdutos();
+    final produtos = await ref.read(produtoRepositoryProvider).listarProdutosPorColaborador(colaborador?.id);
     final itens = await ref
         .read(coletaRepositoryProvider)
         .listarItensDaColeta(widget.args.idColeta);

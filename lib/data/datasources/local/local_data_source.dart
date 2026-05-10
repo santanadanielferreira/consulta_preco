@@ -12,7 +12,7 @@ abstract class LocalDataSource {
   Future<ProdutoModel?> buscarProdutoPorId(int id);
   Future<List<ProdutoModel>> listarProdutos();
   Future<List<ProdutoModel>> buscarProdutosPorNome(String filtroNome);
-  Future<List<ProdutoModel>> listarProdutosPorColaborador(int idColaborador);
+  Future<List<ProdutoModel>> listarProdutosPorColaborador(int? idColaborador);
 
   Future<void> upsertLojas(List<LojaModel> lojas, {int? idColaborador});
   Future<List<LojaModel>> listarLojas({String? filtroNome});
