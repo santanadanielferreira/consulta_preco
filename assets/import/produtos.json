@@ -1,0 +1,22 @@
+[
+  {
+    "codigo_barras": "7891000000011",
+    "nome": "TESTE",
+    "fabricante": "Marca A"
+  },
+  {
+    "codigo_barras": "7891000000028",
+    "nome": "Feijao 1kg",
+    "fabricante": "Marca B"
+  },
+  {
+    "codigo_barras": "7891000000035",
+    "nome": "Cafe 500g",
+    "fabricante": "Marca C"
+  },
+  {
+    "codigo_barras": "7891107101621",
+    "nome": "Óleo de Soja",
+    "fabricante": "Óleo"
+  }
+]
