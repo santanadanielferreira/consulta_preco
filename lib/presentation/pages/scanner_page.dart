@@ -19,6 +19,7 @@ class ScannerPage extends ConsumerStatefulWidget {
 class _ScannerPageState extends ConsumerState<ScannerPage> {
   final MobileScannerController _controller = MobileScannerController();
   bool _processing = false;
+  bool _didReturn = false;
   // Temporary bypass to jump directly to PriceInputPage for testing.
   static const bool _bypassToPriceInput = false;
 
@@ -45,7 +46,7 @@ class _ScannerPageState extends ConsumerState<ScannerPage> {
 
         final produtos = await ref
             .read(listarProdutosColaboradorUseCaseProvider)
-            .execute(colaborador!.id!);
+          .execute(widget.args.idLoja, colaborador!.id!);
         if (!mounted) return;
         if (produtos.isEmpty) {
           ref.read(feedbackServiceProvider).error(
@@ -101,8 +102,8 @@ class _ScannerPageState extends ConsumerState<ScannerPage> {
         return;
       }
 
-      final buscarProduto = ref.read(buscarProdutoCodigoBarrasColaboradorUseCaseProvider);
-      final produto = await buscarProduto.execute(raw, colaborador!.id!);
+      final buscarProdutoNaLoja = ref.read(buscarProdutoCodigoBarrasNaLojaUseCaseProvider);
+      final produto = await buscarProdutoNaLoja.execute(raw, widget.args.idColeta);
 
       if (!mounted) {
         return;
@@ -113,6 +114,12 @@ class _ScannerPageState extends ConsumerState<ScannerPage> {
           context: context,
           message: UiMessages.produtoNaoEncontrado,
         );
+        return;
+      }
+
+      if (widget.args.isBusca){
+        _didReturn = true;
+        Navigator.pop(context, produto.codigoBarras);
         return;
       }
 
@@ -131,10 +138,13 @@ class _ScannerPageState extends ConsumerState<ScannerPage> {
       }
 
       if (saved == true) {
+        _didReturn = true;
         Navigator.pop(context, true);
       }
     } finally {
-      _processing = false;
+      if (!_didReturn) {
+        _processing = false;
+      }
     }
   }
 

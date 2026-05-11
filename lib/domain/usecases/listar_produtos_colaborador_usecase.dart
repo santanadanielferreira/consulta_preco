@@ -6,7 +6,7 @@ class ListarProdutosColaboradorUseCase {
 
   final ProdutoRepository _produtoRepository;
 
-  Future<List<Produto>> execute(int idColaborador) {
-    return _produtoRepository.listarProdutosPorColaborador(idColaborador);
+  Future<List<Produto>> execute(int idLoja, int idColaborador) {
+    return _produtoRepository.listarProdutosPorLojaEColaborador(idLoja, idColaborador);
   }
 }

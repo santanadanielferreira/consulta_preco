@@ -27,10 +27,11 @@ class CalcularProgressoColetaUseCase {
 
   Future<ProgressoColeta> execute({
     required int idColeta,
+    required int idLoja,
     required int idColaborador,
   }) async {
     final itens = await _coletaRepository.listarItensDaColeta(idColeta);
-    final produtos = await _produtoRepository.listarProdutosPorColaborador(idColaborador);
+    final produtos = await _produtoRepository.listarProdutosPorLojaEColaborador(idLoja, idColaborador);
     final coletados = itens.length;
     final totalProdutosEstimado = produtos.length;
     final totalSeguro = totalProdutosEstimado <= 0 ? 1 : totalProdutosEstimado;

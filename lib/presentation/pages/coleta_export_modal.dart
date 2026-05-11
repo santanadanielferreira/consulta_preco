@@ -44,6 +44,7 @@ class _ColetaExportModalState extends ConsumerState<ColetaExportModal> {
           idLoja: widget.args.idLoja,
           nomeColaborador: colaborador.nome,
           emailColaborador: colaborador.email,
+          idColaborador: colaborador.id!,
         );
 
     return _ExportResumoData.fromMap(exportJson);
@@ -56,10 +57,19 @@ class _ColetaExportModalState extends ConsumerState<ColetaExportModal> {
 
     try {
       final jsonContent = const JsonEncoder.withIndent('  ').convert(resumo.exportData);
+
       await ref.read(exportFileServiceProvider).saveCollectionJson(
-            idColeta: widget.args.idColeta,
-            jsonContent: jsonContent,
-          );
+        idColeta: widget.args.idColeta,
+        jsonContent: jsonContent,
+      );
+
+      await ref.read(coletaRepositoryProvider).marcarColetaComoExportada(
+        widget.args.idColeta,
+        dataExportacao: DateTime.now(),
+        itensColetados: resumo.itensColetados,
+        totalEstimado: resumo.itensEsperados,
+        percentual: resumo.percentual * 100,
+      );
 
       if (!mounted) {
         return;

@@ -7,7 +7,7 @@ class DatabaseService {
 
   static final DatabaseService instance = DatabaseService._();
   static const _databaseName = 'keeprice.db';
-  static const _databaseVersion = 3;
+  static const _databaseVersion = 5;
 
   Database? _database;
 
@@ -27,6 +27,7 @@ class DatabaseService {
       dbPath,
       version: _databaseVersion,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -52,6 +53,7 @@ class DatabaseService {
         estado TEXT NOT NULL,
         id_colaborador INTEGER NOT NULL,
         tempo_medio_coleta INTEGER DEFAULT 300,
+        ultimo_export TEXT,
         FOREIGN KEY(id_colaborador) REFERENCES colaborador(id)
       )
     ''');
@@ -84,6 +86,10 @@ class DatabaseService {
         data_coleta TEXT NOT NULL,
         id_colaborador INTEGER NOT NULL,
         id_dispositivo INTEGER NOT NULL,
+        data_exportacao TEXT,
+        itens_coletados_exportacao INTEGER,
+        total_estimado_exportacao INTEGER,
+        percentual_exportacao REAL,
         FOREIGN KEY(id_loja) REFERENCES loja(id),
         FOREIGN KEY(id_colaborador) REFERENCES colaborador(id),
         FOREIGN KEY(id_dispositivo) REFERENCES dispositivo(id)
@@ -104,6 +110,19 @@ class DatabaseService {
       )
     ''');
 
+    await db.execute('''
+      CREATE TABLE loja_produto (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        loja_id INTEGER NOT NULL,
+        produto_id INTEGER NOT NULL,
+        colaborador_id INTEGER NOT NULL,
+        UNIQUE(loja_id, produto_id),
+        FOREIGN KEY(loja_id) REFERENCES loja(id),
+        FOREIGN KEY(produto_id) REFERENCES produto(id),
+        FOREIGN KEY(colaborador_id) REFERENCES colaborador(id)
+      )
+    ''');
+
     await db.insert('colaborador', {
       'id': 1,
       'nome': 'Operador Local',
@@ -120,5 +139,49 @@ class DatabaseService {
       'versao_android': '14',
       'data_cadastro': DateTime.now().toIso8601String(),
     });
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 4) {
+      await db.transaction((txn) async {
+        await txn.execute('''
+          CREATE TABLE IF NOT EXISTS loja_produto (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            loja_id INTEGER NOT NULL,
+            produto_id INTEGER NOT NULL,
+            colaborador_id INTEGER NOT NULL,
+            UNIQUE(loja_id, produto_id),
+            FOREIGN KEY(loja_id) REFERENCES loja(id),
+            FOREIGN KEY(produto_id) REFERENCES produto(id),
+            FOREIGN KEY(colaborador_id) REFERENCES colaborador(id)
+          )
+        ''');
+
+        // Migrate existing products to be related to stores of the same collaborator.
+        // This will create one relation per (loja, produto) where both belong to same colaborador.
+        await txn.execute('''
+          INSERT OR IGNORE INTO loja_produto (loja_id, produto_id, colaborador_id)
+          SELECT l.id AS loja_id, p.id AS produto_id, p.id_colaborador AS colaborador_id
+          FROM loja l
+          JOIN produto p ON l.id_colaborador = p.id_colaborador
+        ''');
+      });
+    }
+
+    if (oldVersion < 5) {
+      await db.transaction((txn) async {
+        await txn.execute('ALTER TABLE coleta ADD COLUMN data_exportacao TEXT');
+        await txn.execute(
+          'ALTER TABLE coleta ADD COLUMN itens_coletados_exportacao INTEGER',
+        );
+        await txn.execute(
+          'ALTER TABLE coleta ADD COLUMN total_estimado_exportacao INTEGER',
+        );
+        await txn.execute(
+          'ALTER TABLE coleta ADD COLUMN percentual_exportacao REAL',
+        );
+        await txn.execute('ALTER TABLE loja ADD COLUMN ultimo_export TEXT');
+      });
+    }
   }
 }

@@ -30,7 +30,6 @@ class _CatalogItemView {
 class _ColetaCatalogPageState extends ConsumerState<ColetaCatalogPage> {
   final _searchController = TextEditingController();
   String _query = '';
-  late Future<List<Produto>> _futureProdutosBusca;
   late Future<List<_CatalogItemView>> _futureItems;
 
   static const _primaryBlue = Color(0xFF4A89F3);
@@ -41,7 +40,6 @@ class _ColetaCatalogPageState extends ConsumerState<ColetaCatalogPage> {
   @override
   void initState() {
     super.initState();
-    _futureProdutosBusca = Future.value(const <Produto>[]);
     _futureItems = _loadItems();
   }
 
@@ -69,60 +67,38 @@ class _ColetaCatalogPageState extends ConsumerState<ColetaCatalogPage> {
   Future<void> _refresh() async {
     setState(() {
       _futureItems = _loadItems();
-      _futureProdutosBusca = _buscarProdutosPorNome(_query);
     });
   }
 
-  Future<List<Produto>> _buscarProdutosPorNome(String query) async {
-    final filtro = query.trim();
-    if (filtro.isEmpty) {
-      return const <Produto>[];
-    }
 
-    final colaborador = ref.read(colaboradorSessaoProvider);
-    if (colaborador?.id == null) {
-      return const <Produto>[];
-    }
+Future<void> _abrirScanner(bool isBusca) async {
+  final result = await Navigator.pushNamed(
+    context,
+    AppConstants.routeScanner,
+    arguments: ScannerArgs(
+      idColeta: widget.args.idColeta,
+        idLoja: widget.args.idLoja,
+      isBusca: isBusca,
+    ),
+  );
 
-    final produtoRepo = ref.read(produtoRepositoryProvider);
-    final todosProdutos = await produtoRepo.listarProdutosPorColaborador(colaborador!.id!);
-    
-    return todosProdutos
-        .where((p) => p.nome.toLowerCase().contains(filtro.toLowerCase()))
-        .toList();
+  if (result == null) {
+    return;
   }
 
-  Future<void> _onTapProdutoBusca(Produto produto) async {
-    if (produto.id == null) {
-      return;
-    }
+  if (isBusca) {
+    final codigo = result as String;
 
-    final updated = await Navigator.pushNamed(
-      context,
-      AppConstants.routePriceInput,
-      arguments: PriceInputArgs(
-        idColeta: widget.args.idColeta,
-        idProduto: produto.id!,
-        nomeProduto: produto.nome,
-      ),
-    );
-
-    if (updated == true) {
-      await _refresh();
-    }
+    setState(() {
+      _searchController.text = codigo;
+      _query = codigo;
+    });
   }
 
-  Future<void> _abrirScanner() async {
-    final updated = await Navigator.pushNamed(
-      context,
-      AppConstants.routeScanner,
-      arguments: ScannerArgs(idColeta: widget.args.idColeta),
-    );
-
-    if (updated == true) {
-      await _refresh();
-    }
+  if (result == true) {
+    await _refresh();
   }
+}
 
   Future<void> _abrirExportacao() async {
     final exported = await showDialog<bool>(
@@ -133,6 +109,60 @@ class _ColetaCatalogPageState extends ConsumerState<ColetaCatalogPage> {
 
     if (exported == true && mounted) {
       await _refresh();
+    }
+  }
+
+  Future<void> _confirmarReinicioColeta() async {
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Reiniciar coleta'),
+          content: const Text(
+            'Isso vai limpar os itens ativos desta coleta e zerar o progresso. Deseja continuar?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(backgroundColor: _primaryBlue),
+              child: const Text('Reiniciar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmou != true) {
+      return;
+    }
+
+    try {
+      await ref.read(reiniciarColetaUseCaseProvider).execute(widget.args.idColeta);
+
+      if (!mounted) {
+        return;
+      }
+
+      await ref.read(feedbackServiceProvider).success(
+        context: context,
+        message: 'Coleta reiniciada com sucesso.',
+        vibracaoAtiva: ref.read(vibracaoAtivaProvider),
+      );
+
+      await _refresh();
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ref.read(feedbackServiceProvider).error(
+        context: context,
+        message: 'Falha ao reiniciar coleta: $e',
+      );
     }
   }
 
@@ -368,7 +398,7 @@ class _ColetaCatalogPageState extends ConsumerState<ColetaCatalogPage> {
         hintText: 'Nome ou código de barras',
         prefixIcon: const Icon(Icons.search, color: _mutedColor),
         suffixIcon: IconButton(
-          onPressed: _abrirScanner,
+          onPressed: () =>_abrirScanner(true),
           icon: const Icon(Icons.qr_code_scanner, color: _primaryBlue),
           tooltip: 'Buscar por scan',
         ),
@@ -391,7 +421,6 @@ class _ColetaCatalogPageState extends ConsumerState<ColetaCatalogPage> {
       onChanged: (value) {
         setState(() {
           _query = value;
-          _futureProdutosBusca = _buscarProdutosPorNome(value);
         });
       },
     );
@@ -492,38 +521,6 @@ class _ColetaCatalogPageState extends ConsumerState<ColetaCatalogPage> {
                   ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProductSearchResults(List<Produto> produtosBusca) {
-    if (_query.trim().isEmpty || produtosBusca.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      constraints: const BoxConstraints(maxHeight: 180),
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.grey.shade200),
-        ),
-        child: ListView.separated(
-          shrinkWrap: true,
-          itemCount: produtosBusca.length,
-          separatorBuilder: (context, index) => const Divider(height: 1),
-          itemBuilder: (context, index) {
-            final produto = produtosBusca[index];
-            return ListTile(
-              dense: true,
-              title: Text(produto.nome),
-              subtitle: Text('Cod: ${produto.codigoBarras}'),
-              onTap: () => _onTapProdutoBusca(produto),
-            );
-          },
         ),
       ),
     );
@@ -638,11 +635,19 @@ class _ColetaCatalogPageState extends ConsumerState<ColetaCatalogPage> {
       children: [
         FloatingActionButton.extended(
           heroTag: 'scan_fab',
-          onPressed: _abrirScanner,
+          onPressed: () => _abrirScanner(false),
           icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
           label: const Text('Escanear'),
           backgroundColor: _primaryBlue,
           foregroundColor: Colors.white,
+        ),
+        const SizedBox(width: 12),
+        FloatingActionButton.small(
+          heroTag: 'restart_fab',
+          onPressed: _confirmarReinicioColeta,
+          backgroundColor: const Color(0xFFFFF3E0),
+          foregroundColor: const Color(0xFFE67E22),
+          child: const Icon(Icons.restart_alt),
         ),
         const SizedBox(width: 12),
         FloatingActionButton.small(
@@ -720,7 +725,8 @@ class _ColetaCatalogPageState extends ConsumerState<ColetaCatalogPage> {
               ? items
               : items.where((entry) {
                   final nome = entry.produto?.nome ?? '';
-                  return nome.toLowerCase().contains(query);
+                  final codigoBarras = entry.produto?.codigoBarras ?? '';
+                  return nome.toLowerCase().contains(query) || codigoBarras.contains(query);
                 }).toList(growable: false);
 
           return Padding(
@@ -732,14 +738,7 @@ class _ColetaCatalogPageState extends ConsumerState<ColetaCatalogPage> {
                 const SizedBox(height: 24),
                 _buildSearchField(),
                 const SizedBox(height: 16),
-                FutureBuilder<List<Produto>>(
-                  future: _futureProdutosBusca,
-                  builder: (context, searchSnapshot) {
-                    final produtosBusca = searchSnapshot.data ?? const <Produto>[];
-                    return _buildProductSearchResults(produtosBusca);
-                  },
-                ),
-                const SizedBox(height: 16),
+
                 _buildCountCard(items.length),
                 const SizedBox(height: 16),
                 Expanded(

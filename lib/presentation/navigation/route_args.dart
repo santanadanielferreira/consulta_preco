@@ -11,9 +11,11 @@ class ColetaCatalogArgs {
 }
 
 class ScannerArgs {
-  const ScannerArgs({required this.idColeta});
+  const ScannerArgs({required this.idColeta, required this.idLoja, required this.isBusca});
 
   final int idColeta;
+  final int idLoja;
+  final bool isBusca;
 }
 
 class PriceInputArgs {

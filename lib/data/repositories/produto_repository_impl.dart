@@ -43,6 +43,11 @@ class ProdutoRepositoryImpl implements ProdutoRepository {
   }
 
   @override
+  Future<Produto?> buscarPorCodigoBarrasNaLoja(String codigoBarras, int lojaId, int colaboradorId) {
+    return _localDataSource.buscarProdutoPorCodigoBarrasNaLoja(codigoBarras, lojaId, colaboradorId);
+  }
+
+  @override
   Future<List<Produto>> listarProdutos() {
     return _localDataSource.listarProdutos();
   }
@@ -50,5 +55,10 @@ class ProdutoRepositoryImpl implements ProdutoRepository {
   @override
   Future<List<Produto>> listarProdutosPorColaborador(int? idColaborador) {
     return _localDataSource.listarProdutosPorColaborador(idColaborador);
+  }
+
+  @override
+  Future<List<Produto>> listarProdutosPorLojaEColaborador(int lojaId, int colaboradorId) {
+    return _localDataSource.listarProdutosPorLojaEColaborador(lojaId, colaboradorId);
   }
 }

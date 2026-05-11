@@ -34,4 +34,9 @@ class LojaRepositoryImpl implements LojaRepository {
   Future<Loja?> buscarPorId(int id) {
     return _localDataSource.buscarLojaPorId(id);
   }
+
+  @override
+  Future<void> vincularProduto(int lojaId, int produtoId, int colaboradorId) async {
+    await _localDataSource.upsertLojaProduto(lojaId, produtoId, colaboradorId);
+  }
 }

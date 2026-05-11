@@ -29,8 +29,10 @@ import '../../domain/usecases/iniciar_coleta_usecase.dart';
 import '../../domain/usecases/listar_lojas_usecase.dart';
 import '../../domain/usecases/listar_lojas_colaborador_usecase.dart';
 import '../../domain/usecases/buscar_produto_codigo_barras_colaborador_usecase.dart';
+import '../../domain/usecases/buscar_produto_codigo_barras_na_loja_usecase.dart';
 import '../../domain/usecases/listar_produtos_colaborador_usecase.dart';
 import '../../domain/usecases/remover_item_coleta_usecase.dart';
+import '../../domain/usecases/reiniciar_coleta_usecase.dart';
 import '../../domain/usecases/registrar_item_coleta_usecase.dart';
 import '../../core/utils/export_file_service.dart';
 import 'feedback_service.dart';
@@ -64,7 +66,10 @@ final dispositivoRepositoryProvider = Provider<DispositivoRepository>((ref) {
 });
 
 final importarProdutosUseCaseProvider = Provider<ImportarProdutosUseCase>((ref) {
-  return ImportarProdutosUseCase(ref.watch(produtoRepositoryProvider));
+  return ImportarProdutosUseCase(
+    ref.watch(produtoRepositoryProvider),
+    ref.watch(lojaRepositoryProvider),
+  );
 });
 
 final importarLojasUseCaseProvider = Provider<ImportarLojasUseCase>((ref) {
@@ -101,6 +106,14 @@ final registrarItemColetaUseCaseProvider = Provider<RegistrarItemColetaUseCase>(
   return RegistrarItemColetaUseCase(ref.watch(coletaRepositoryProvider));
 });
 
+final buscarProdutoCodigoBarrasNaLojaUseCaseProvider =
+    Provider<BuscarProdutoPorCodigoBarrasNaLojaUseCase>((ref) {
+  return BuscarProdutoPorCodigoBarrasNaLojaUseCase(
+    ref.watch(produtoRepositoryProvider),
+    ref.watch(coletaRepositoryProvider),
+  );
+});
+
 final buscarProdutoPorCodigoUseCaseProvider =
     Provider<BuscarProdutoPorCodigoBarrasUseCase>((ref) {
       return BuscarProdutoPorCodigoBarrasUseCase(
@@ -118,6 +131,10 @@ final calcularProgressoUseCaseProvider =
 
 final removerItemColetaUseCaseProvider = Provider<RemoverItemColetaUseCase>((ref) {
   return RemoverItemColetaUseCase(ref.watch(coletaRepositoryProvider));
+});
+
+final reiniciarColetaUseCaseProvider = Provider<ReiniciarColetaUseCase>((ref) {
+  return ReiniciarColetaUseCase(ref.watch(coletaRepositoryProvider));
 });
 
 final exportarColetasDiariasUseCaseProvider =

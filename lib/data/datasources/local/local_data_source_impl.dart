@@ -5,6 +5,7 @@ import '../../models/colaborador_model.dart';
 import '../../models/dispositivo_model.dart';
 import '../../models/item_coleta_model.dart';
 import '../../models/loja_model.dart';
+import '../../models/loja_produto_model.dart';
 import '../../models/produto_model.dart';
 import 'database_service.dart';
 import 'local_data_source.dart';
@@ -87,6 +88,27 @@ class LocalDataSourceImpl implements LocalDataSource {
       return null;
     }
 
+    return ProdutoModel.fromMap(result.first);
+  }
+
+  @override
+  Future<ProdutoModel?> buscarProdutoPorCodigoBarrasNaLoja(
+    String codigoBarras,
+    int lojaId,
+    int colaboradorId,
+  ) async {
+    final db = await _db;
+    final result = await db.rawQuery(
+      '''
+      SELECT p.* FROM produto p
+      INNER JOIN loja_produto lp ON lp.produto_id = p.id
+      WHERE p.codigo_barras = ? AND lp.loja_id = ? AND lp.colaborador_id = ?
+      LIMIT 1
+      ''',
+      [codigoBarras, lojaId, colaboradorId],
+    );
+
+    if (result.isEmpty) return null;
     return ProdutoModel.fromMap(result.first);
   }
 
@@ -202,6 +224,56 @@ class LocalDataSourceImpl implements LocalDataSource {
   }
 
   @override
+  Future<void> upsertLojaProduto(int lojaId, int produtoId, int colaboradorId) async {
+    final db = await _db;
+    await db.insert(
+      'loja_produto',
+      {
+        'loja_id': lojaId,
+        'produto_id': produtoId,
+        'colaborador_id': colaboradorId,
+      },
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
+  }
+
+  @override
+  Future<void> upsertLojaProdutos(List<LojaProdutoModel> lojaProdutos, {int? idColaborador}) async {
+    final db = await _db;
+
+    await db.transaction((txn) async {
+      for (final lp in lojaProdutos) {
+        final map = lp.toMap();
+        // If idColaborador provided, override
+        if (idColaborador != null) {
+          map['colaborador_id'] = idColaborador;
+        }
+        // Remove nulls to avoid inserting null columns
+        map.removeWhere((key, value) => value == null);
+
+        await txn.insert(
+          'loja_produto',
+          map,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    });
+  }
+
+  @override
+  Future<List<ProdutoModel>> listarProdutosPorLojaEColaborador(int lojaId, int colaboradorId) async {
+    final db = await _db;
+    final result = await db.rawQuery('''
+      SELECT p.* FROM produto p
+      INNER JOIN loja_produto lp ON lp.produto_id = p.id
+      WHERE lp.loja_id = ? AND lp.colaborador_id = ?
+      ORDER BY p.nome ASC
+    ''', [lojaId, colaboradorId]);
+
+    return result.map(ProdutoModel.fromMap).toList(growable: false);
+  }
+
+  @override
   Future<int> inserirColeta(ColetaModel coleta) async {
     final db = await _db;
     return db.insert('coleta', coleta.toMap()..remove('id'));
@@ -240,6 +312,19 @@ class LocalDataSourceImpl implements LocalDataSource {
   }
 
   @override
+  Future<List<ColetaModel>> listarColetasPorColaborador(int idColaborador) async {
+    final db = await _db;
+    final result = await db.query(
+      'coleta',
+      where: 'id_colaborador = ?',
+      whereArgs: [idColaborador],
+      orderBy: 'data_coleta DESC',
+    );
+
+    return result.map(ColetaModel.fromMap).toList(growable: false);
+  }
+
+  @override
   Future<void> inserirOuAtualizarItemColeta(ItemColetaModel item) async {
     final db = await _db;
 
@@ -258,6 +343,82 @@ class LocalDataSourceImpl implements LocalDataSource {
       where: 'id_coleta = ? AND id_produto = ?',
       whereArgs: [idColeta, idProduto],
     );
+  }
+
+  @override
+  Future<void> marcarColetaComoExportada(
+    int idColeta, {
+    required DateTime dataExportacao,
+    required int itensColetados,
+    required int totalEstimado,
+    required double percentual,
+  }) async {
+    final db = await _db;
+
+    await db.transaction((txn) async {
+      await txn.update(
+        'coleta',
+        {
+          'data_exportacao': dataExportacao.toIso8601String(),
+          'itens_coletados_exportacao': itensColetados,
+          'total_estimado_exportacao': totalEstimado,
+          'percentual_exportacao': percentual,
+        },
+        where: 'id = ?',
+        whereArgs: [idColeta],
+      );
+
+      final coleta = await txn.query(
+        'coleta',
+        columns: ['id_loja'],
+        where: 'id = ?',
+        whereArgs: [idColeta],
+        limit: 1,
+      );
+
+      if (coleta.isNotEmpty) {
+        await txn.update(
+          'loja',
+          {'ultimo_export': dataExportacao.toIso8601String()},
+          where: 'id = ?',
+          whereArgs: [coleta.first['id_loja']],
+        );
+      }
+    });
+  }
+
+  @override
+  Future<void> reiniciarColeta(int idColeta) async {
+    final db = await _db;
+
+    await db.transaction((txn) async {
+      await txn.delete(
+        'item_coleta',
+        where: 'id_coleta = ?',
+        whereArgs: [idColeta],
+      );
+
+      await txn.update(
+        'coleta',
+        {
+          'data_exportacao': null,
+          'itens_coletados_exportacao': null,
+          'total_estimado_exportacao': null,
+          'percentual_exportacao': null,
+        },
+        where: 'id = ?',
+        whereArgs: [idColeta],
+      );
+    });
+  }
+
+  @override
+  Future<void> removerColeta(int idColeta) async {
+    final db = await _db;
+    await db.transaction((txn) async {
+      await txn.delete('item_coleta', where: 'id_coleta = ?', whereArgs: [idColeta]);
+      await txn.delete('coleta', where: 'id = ?', whereArgs: [idColeta]);
+    });
   }
 
   @override

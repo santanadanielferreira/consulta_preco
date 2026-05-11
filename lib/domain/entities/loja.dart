@@ -9,6 +9,7 @@ class Loja extends Equatable {
     required this.estado,
     required this.idColaborador,
     this.tempoMedioColeta = 300,
+    this.ultimoExport,
   });
 
   final int? id;
@@ -18,6 +19,7 @@ class Loja extends Equatable {
   final String estado;
   final int idColaborador;
   final int tempoMedioColeta;
+  final DateTime? ultimoExport;
 
   Loja copyWith({
     int? id,
@@ -27,6 +29,7 @@ class Loja extends Equatable {
     String? estado,
     int? idColaborador,
     int? tempoMedioColeta,
+    DateTime? ultimoExport,
   }) {
     return Loja(
       id: id ?? this.id,
@@ -36,9 +39,19 @@ class Loja extends Equatable {
       estado: estado ?? this.estado,
       idColaborador: idColaborador ?? this.idColaborador,
       tempoMedioColeta: tempoMedioColeta ?? this.tempoMedioColeta,
+      ultimoExport: ultimoExport ?? this.ultimoExport,
     );
   }
 
   @override
-  List<Object?> get props => [id, nome, endereco, cidade, estado, idColaborador, tempoMedioColeta];
+  List<Object?> get props => [
+        id,
+        nome,
+        endereco,
+        cidade,
+        estado,
+        idColaborador,
+        tempoMedioColeta,
+        ultimoExport,
+      ];
 }

@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/ui_messages.dart';
 import '../../domain/entities/loja.dart';
+import '../../domain/entities/coleta.dart';
 import '../controllers/app_providers.dart';
 import '../navigation/route_args.dart';
 
@@ -19,9 +20,30 @@ class StoreSelectionPage extends ConsumerStatefulWidget {
   ConsumerState<StoreSelectionPage> createState() => _StoreSelectionPageState();
 }
 
+enum _StoreCollectionState { notStarted, inProgress, completed }
+
+class _StoreCollectionStatus {
+  const _StoreCollectionStatus({
+    required this.state,
+    required this.itensColetados,
+    required this.totalEstimado,
+    required this.percentual,
+    required this.dataExportacao,
+  });
+
+  final _StoreCollectionState state;
+  final int itensColetados;
+  final int totalEstimado;
+  final double percentual;
+  final DateTime? dataExportacao;
+
+  bool get foiExportada => dataExportacao != null;
+}
+
 class _StoreSelectionPageState extends ConsumerState<StoreSelectionPage> {
   final _searchController = TextEditingController();
   late Future<List<Loja>> _futureStores;
+  Map<int, _StoreCollectionStatus> _statusByStore = const {};
 
   static const _importFolderName = 'keeprice_import';
   static const _lojasFileName = 'lojas.json';
@@ -105,7 +127,86 @@ class _StoreSelectionPageState extends ConsumerState<StoreSelectionPage> {
       lojas = await listarLojasColaborador.execute(colaborador.id!);
     }
 
+    await _carregarStatusPorLoja(lojas, colaborador.id!);
+
     return lojas;
+  }
+
+  Future<void> _carregarStatusPorLoja(List<Loja> lojas, int idColaborador) async {
+    final coletaRepo = ref.read(coletaRepositoryProvider);
+    final produtoRepo = ref.read(produtoRepositoryProvider);
+
+    final coletasColaborador = await coletaRepo.listarColetasPorColaborador(idColaborador);
+    final coletaPorLoja = <int, Coleta>{};
+
+    for (final coleta in coletasColaborador) {
+      if (coleta.idLoja <= 0) {
+        continue;
+      }
+      final anterior = coletaPorLoja[coleta.idLoja];
+      if (anterior == null || coleta.dataColeta.isAfter(anterior.dataColeta)) {
+        coletaPorLoja[coleta.idLoja] = coleta;
+      }
+    }
+
+    final statusByStore = <int, _StoreCollectionStatus>{};
+
+    for (final loja in lojas) {
+      final idLoja = loja.id;
+      if (idLoja == null) {
+        continue;
+      }
+
+      final coleta = coletaPorLoja[idLoja];
+      if (coleta == null || coleta.id == null) {
+        statusByStore[idLoja] = const _StoreCollectionStatus(
+          state: _StoreCollectionState.notStarted,
+          itensColetados: 0,
+          totalEstimado: 0,
+          percentual: 0,
+          dataExportacao: null,
+        );
+        continue;
+      }
+
+      final itens = await coletaRepo.listarItensDaColeta(coleta.id!);
+      final produtos = await produtoRepo.listarProdutosPorLojaEColaborador(idLoja, idColaborador);
+
+      final coletadosAtuais = itens.length;
+      final totalAtual = produtos.length;
+      final totalSeguro = totalAtual <= 0 ? 1 : totalAtual;
+        final percentualAtual =
+          ((coletadosAtuais / totalSeguro) * 100).clamp(0, 100).toDouble();
+
+      final usaSnapshot =
+          coleta.dataExportacao != null &&
+          coleta.itensColetadosExportacao != null &&
+          coleta.totalEstimadoExportacao != null &&
+          coleta.percentualExportacao != null;
+
+      final itensExibicao = usaSnapshot ? coleta.itensColetadosExportacao! : coletadosAtuais;
+      final totalExibicao = usaSnapshot ? coleta.totalEstimadoExportacao! : totalAtual;
+      final percentualExibicao = usaSnapshot ? coleta.percentualExportacao! : percentualAtual;
+
+      final concluida = coleta.dataExportacao != null && percentualExibicao >= 100;
+      final emProgresso = itensExibicao > 0;
+
+      final state = concluida
+          ? _StoreCollectionState.completed
+          : emProgresso
+              ? _StoreCollectionState.inProgress
+              : _StoreCollectionState.notStarted;
+
+      statusByStore[idLoja] = _StoreCollectionStatus(
+        state: state,
+        itensColetados: itensExibicao,
+        totalEstimado: totalExibicao,
+        percentual: percentualExibicao,
+        dataExportacao: coleta.dataExportacao ?? loja.ultimoExport,
+      );
+    }
+
+    _statusByStore = statusByStore;
   }
 
   Future<void> _refresh() async {
@@ -222,8 +323,41 @@ class _StoreSelectionPageState extends ConsumerState<StoreSelectionPage> {
     );
   }
 
-  Widget _buildStoreCard(BuildContext context, Loja store) {
+  Widget _buildStoreCard(
+    BuildContext context,
+    Loja store,
+    _StoreCollectionStatus? status,
+  ) {
     final theme = Theme.of(context);
+
+    final statusData =
+        status ??
+        const _StoreCollectionStatus(
+          state: _StoreCollectionState.notStarted,
+          itensColetados: 0,
+          totalEstimado: 0,
+          percentual: 0,
+          dataExportacao: null,
+        );
+
+    Color statusColor;
+    IconData statusIcon;
+    String statusLabel;
+
+    switch (statusData.state) {
+      case _StoreCollectionState.completed:
+        statusColor = const Color(0xFF2E9E44);
+        statusIcon = Icons.check_circle;
+        statusLabel = 'Concluida';
+      case _StoreCollectionState.inProgress:
+        statusColor = const Color(0xFFE67E22);
+        statusIcon = Icons.pending;
+        statusLabel = 'Em progresso';
+      case _StoreCollectionState.notStarted:
+        statusColor = const Color(0xFF8A93A1);
+        statusIcon = Icons.radio_button_unchecked;
+        statusLabel = 'Nao iniciada';
+    }
 
     return Material(
       color: Colors.white,
@@ -240,17 +374,31 @@ class _StoreSelectionPageState extends ConsumerState<StoreSelectionPage> {
               throw const FormatException(UiMessages.sessaoSemUsuario);
             }
 
-            if (dispositivo?.id == null) {
-              throw const FormatException(UiMessages.sessaoSemDispositivo);
+            // Reuse existing coleta for this loja and colaborador (today) if present
+            final coletaRepo = ref.read(coletaRepositoryProvider);
+            final coletasHoje = await coletaRepo.listarColetasDoDia(DateTime.now());
+
+            // Find existing coleta for this loja and colaborador (today)
+            Coleta? existente;
+            for (final c in coletasHoje) {
+              if (c.idLoja == store.id && c.idColaborador == colaborador!.id) {
+                existente = c;
+                break;
+              }
             }
 
-            final idColeta = await ref
-                .read(iniciarColetaUseCaseProvider)
-                .execute(
-                  idLoja: store.id!,
-                  idColaborador: colaborador!.id!,
-                  idDispositivo: dispositivo!.id!,
-                );
+            late final int idColeta;
+            if (existente != null && existente.id != null) {
+              idColeta = existente.id!;
+            } else {
+              idColeta = await ref
+                  .read(iniciarColetaUseCaseProvider)
+                  .execute(
+                    idLoja: store.id!,
+                    idColaborador: colaborador!.id!,
+                    idDispositivo: dispositivo!.id!,
+                  );
+            }
 
             if (!context.mounted) {
               return;
@@ -331,6 +479,77 @@ class _StoreSelectionPageState extends ConsumerState<StoreSelectionPage> {
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: const Color(0xFFA1A8B0),
                       ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: statusColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: statusColor.withValues(alpha: 0.35)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(statusIcon, size: 14, color: statusColor),
+                              const SizedBox(width: 6),
+                              Text(
+                                statusLabel,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: statusColor,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F4F9),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: const Color(0xFFD7DEE8)),
+                          ),
+                          child: Text(
+                            '${statusData.itensColetados}/${statusData.totalEstimado} • ${statusData.percentual.toStringAsFixed(0)}%',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: const Color(0xFF5C6673),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        if (statusData.foiExportada)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEAF7EC),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(color: const Color(0xFFB9E3C0)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.check_circle_outline,
+                                  size: 14,
+                                  color: Color(0xFF2E9E44),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Exportada',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: const Color(0xFF236C34),
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
                     ),
                   ],
                 ),
@@ -463,7 +682,11 @@ class _StoreSelectionPageState extends ConsumerState<StoreSelectionPage> {
                                 const SizedBox(height: 12),
                             itemBuilder: (context, index) {
                               final store = filteredStores[index];
-                              return _buildStoreCard(context, store);
+                              return _buildStoreCard(
+                                context,
+                                store,
+                                _statusByStore[store.id],
+                              );
                             },
                           ),
                   ),

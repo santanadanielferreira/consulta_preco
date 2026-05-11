@@ -21,6 +21,7 @@ class ExportarColetaIndividualUseCase {
     required int idLoja,
     required String nomeColaborador,
     required String emailColaborador,
+    required int idColaborador,
   }) async {
     final coleta = await _coletaRepository.buscarPorId(idColeta);
     if (coleta == null) {
@@ -33,7 +34,7 @@ class ExportarColetaIndividualUseCase {
     }
 
     final itens = await _coletaRepository.listarItensDaColeta(idColeta);
-    final produtos = await _produtoRepository.listarProdutos();
+    final produtos = await _produtoRepository.listarProdutosPorLojaEColaborador(idLoja, idColaborador);
     final produtosPorId = <int, Produto>{
       for (final produto in produtos)
         if (produto.id != null) produto.id!: produto,

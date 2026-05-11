@@ -9,6 +9,7 @@ class LojaModel extends Loja {
     required super.estado,
     required super.idColaborador,
     super.tempoMedioColeta = 300,
+    super.ultimoExport,
   });
 
   factory LojaModel.fromMap(Map<String, dynamic> map) {
@@ -20,6 +21,9 @@ class LojaModel extends Loja {
       estado: map['estado'] as String,
       idColaborador: map['id_colaborador'] as int? ?? 1,
       tempoMedioColeta: map['tempo_medio_coleta'] as int? ?? 300,
+      ultimoExport: (map['ultimo_export'] as String?) != null
+          ? DateTime.parse(map['ultimo_export'] as String)
+          : null,
     );
   }
 
@@ -32,6 +36,7 @@ class LojaModel extends Loja {
       'estado': estado,
       'id_colaborador': idColaborador,
       'tempo_medio_coleta': tempoMedioColeta,
+      'ultimo_export': ultimoExport?.toIso8601String(),
     };
   }
 
@@ -44,6 +49,7 @@ class LojaModel extends Loja {
       estado: entity.estado,
       idColaborador: entity.idColaborador,
       tempoMedioColeta: entity.tempoMedioColeta,
+      ultimoExport: entity.ultimoExport,
     );
   }
 }

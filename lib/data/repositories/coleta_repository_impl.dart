@@ -46,4 +46,36 @@ class ColetaRepositoryImpl implements ColetaRepository {
   Future<List<Coleta>> listarColetasDoDia(DateTime data) {
     return _localDataSource.listarColetasPorDia(data);
   }
+
+  @override
+  Future<List<Coleta>> listarColetasPorColaborador(int idColaborador) {
+    return _localDataSource.listarColetasPorColaborador(idColaborador);
+  }
+
+  @override
+  Future<void> marcarColetaComoExportada(
+    int idColeta, {
+    required DateTime dataExportacao,
+    required int itensColetados,
+    required int totalEstimado,
+    required double percentual,
+  }) {
+    return _localDataSource.marcarColetaComoExportada(
+      idColeta,
+      dataExportacao: dataExportacao,
+      itensColetados: itensColetados,
+      totalEstimado: totalEstimado,
+      percentual: percentual,
+    );
+  }
+
+  @override
+  Future<void> reiniciarColeta(int idColeta) {
+    return _localDataSource.reiniciarColeta(idColeta);
+  }
+
+  @override
+  Future<void> removerColeta(int idColeta) {
+    return _localDataSource.removerColeta(idColeta);
+  }
 }
