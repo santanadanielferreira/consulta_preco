@@ -198,7 +198,20 @@ class _ColetaSummaryPageState extends ConsumerState<ColetaSummaryPage> {
                                 child: Row(children: [
                                   buildThumb(produto),
                                   const SizedBox(width: 12),
-                                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(produto.nome, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: _titleColor, fontWeight: FontWeight.w700)), const SizedBox(height: 6), Text('Cod: ${produto.codigoBarras}', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: _mutedColor))])),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(produto.nome, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: _titleColor, fontWeight: FontWeight.w700)),
+                                        const SizedBox(height: 6),
+                                        Text('Cod: ${produto.codigoBarras}', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: _mutedColor)),
+                                        if ((produto.fabricante ?? '').trim().isNotEmpty) ...[
+                                          const SizedBox(height: 4),
+                                          Text(produto.fabricante, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: _mutedColor)),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
                                 ]),
                               ),
                             ),
@@ -221,7 +234,20 @@ class _ColetaSummaryPageState extends ConsumerState<ColetaSummaryPage> {
                               child: Row(children: [
                                 buildThumb(produto),
                                 const SizedBox(width: 12),
-                                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(produto.nome, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: _titleColor, fontWeight: FontWeight.w700)), const SizedBox(height: 6), Text('Cod: ${produto.codigoBarras}', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: _mutedColor))])),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(produto.nome, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: _titleColor, fontWeight: FontWeight.w700)),
+                                      const SizedBox(height: 6),
+                                      Text('Cod: ${produto.codigoBarras}', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: _mutedColor)),
+                                      if ((produto.fabricante ?? '').trim().isNotEmpty) ...[
+                                        const SizedBox(height: 4),
+                                        Text(produto.fabricante, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: _mutedColor)),
+                                      ],
+                                    ],
+                                  ),
+                                ),
                               ]),
                             ),
                           ),

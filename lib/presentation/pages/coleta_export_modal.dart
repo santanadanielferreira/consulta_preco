@@ -211,6 +211,16 @@ class _ColetaExportModalState extends ConsumerState<ColetaExportModal> {
                     fontSize: 12,
                   ),
                 ),
+                if ((item.fabricante ?? '').trim().isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    item.fabricante!,
+                    style: TextStyle(
+                      color: _mutedColor,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 6),
                 Text(
                   'R\$ ${item.preco.toStringAsFixed(2)}',
@@ -490,12 +500,14 @@ class _ExportResumoItem {
     required this.codigoBarras,
     required this.preco,
     required this.fotoBase64,
+    this.fabricante,
   });
 
   final String nomeProduto;
   final String codigoBarras;
   final double preco;
   final String? fotoBase64;
+  final String? fabricante;
 
   factory _ExportResumoItem.fromMap(Map<String, dynamic> map) {
     final produto = map['produto'] as Map<String, dynamic>? ?? const {};
@@ -504,6 +516,7 @@ class _ExportResumoItem {
       codigoBarras: produto['codigo_barras'] as String? ?? '-',
       preco: (map['preco'] as num?)?.toDouble() ?? 0,
       fotoBase64: map['foto_base64'] as String?,
+      fabricante: produto['fabricante'] as String?,
     );
   }
 }

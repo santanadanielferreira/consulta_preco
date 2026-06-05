@@ -579,6 +579,15 @@ Future<void> _abrirScanner(bool isBusca) async {
                             color: _mutedColor,
                           ),
                     ),
+                    if ((item.produto?.fabricante ?? '').trim().isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        item.produto!.fabricante,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: _mutedColor,
+                            ),
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     Text(
                       'Preco: R\$ ${item.item.preco.toStringAsFixed(2)}',
