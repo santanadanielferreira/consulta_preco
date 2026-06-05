@@ -189,6 +189,10 @@ class _ColetaEditPageState extends ConsumerState<ColetaEditPage> {
             padding: const EdgeInsets.all(20),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(widget.args.nomeProduto, style: Theme.of(context).textTheme.titleLarge),
+              if ((produto?.fabricante ?? '').trim().isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(produto!.fabricante, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: _textGrey)),
+              ],
               const SizedBox(height: 12),
               _buildImageSection(produto),
               const SizedBox(height: 16),

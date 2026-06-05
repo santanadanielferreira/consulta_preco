@@ -343,9 +343,21 @@ class _PriceInputPageState extends ConsumerState<PriceInputPage> {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.white, width: 0),
                     ),
-                    child: Text(
-                      produto.nome,
-                      style: TextStyle(color: _textGrey, fontSize: 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          produto.nome,
+                          style: TextStyle(color: _textGrey, fontSize: 14),
+                        ),
+                        if ((produto.fabricante ?? '').trim().isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            produto.fabricante,
+                            style: TextStyle(color: _textGrey.withOpacity(0.8), fontSize: 12),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                   const SizedBox(height: 15),
